@@ -1,7 +1,7 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from service.clients.models import Client
+from clients.models import Client
 
 
 class Service(models.Model):
@@ -18,7 +18,7 @@ class Plan(models.Model):
 
     play_type = models.CharField(choices=PLAN_TYPES, max_length=10)
     discount_percent = models.PositiveIntegerField(default=0, validators=[
-        MaxValueValidator(100), MinValueValidator(1)
+        MaxValueValidator(100), MinValueValidator(0)
     ])
 
 
