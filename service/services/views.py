@@ -1,8 +1,12 @@
+from django.conf import settings
 from django.db.models import Prefetch, F, Sum
+from django.core.cache import cache
+from django.db.models.signals import post_delete
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from clients.models import Client
 from services.models import Subscription
+from services.receivers import delete_cache_total_sum
 from services.serializers import SubscriptionsSerializer
 
 
@@ -17,7 +21,18 @@ class SubscriptionView(ReadOnlyModelViewSet):
         queryset = self.filter_queryset(self.get_queryset())
         response = super().list(request, *args, **kwargs)
 
+        price_cache = cache.get(settings.PRICE_CACHE_NAME)
+
+        if price_cache:
+            total_price = price_cache
+        else:
+            total_price = queryset.aggregate(total=Sum('price')).get('total')
+            cache.set(settings.PRICE_CACHE_NAME, total_price, 60 * 60)
+
         response_data = {'result': response.data}
-        response_data['total_amount'] = queryset.aggregate(total=Sum('price')).get('total')
+        response_data['total_amount'] = total_price
         response.data = response_data
         return response
+
+
+post_delete.connect(delete_cache_total_sum, sender=Subscription)
